@@ -25,21 +25,23 @@ defmodule SocialScribe.Workers.BotStatusPoller do
   defp poll_and_process_bot(bot_record) do
     case RecallApi.get_bot(bot_record.recall_bot_id) do
       {:ok, %Tesla.Env{body: bot_api_info}} ->
-        new_status =
-          bot_api_info
-          |> Map.get(:status_changes)
-          |> List.last()
-          |> Map.get(:code)
+        status_changes = Map.get(bot_api_info, :status_changes, [])
 
-        {:ok, updated_bot_record} = Bots.update_recall_bot(bot_record, %{status: new_status})
+        case List.last(status_changes) do
+          nil ->
+            Logger.debug("Bot #{bot_record.recall_bot_id} has no status changes yet, skipping")
 
-        if new_status == "done" &&
-             is_nil(Meetings.get_meeting_by_recall_bot_id(updated_bot_record.id)) do
-          process_completed_bot(updated_bot_record, bot_api_info)
-        else
-          if new_status != bot_record.status do
-            Logger.info("Bot #{bot_record.recall_bot_id} status updated to: #{new_status}")
-          end
+          %{code: new_status} ->
+            {:ok, updated_bot_record} = Bots.update_recall_bot(bot_record, %{status: new_status})
+
+            if new_status == "done" &&
+                 is_nil(Meetings.get_meeting_by_recall_bot_id(updated_bot_record.id)) do
+              process_completed_bot(updated_bot_record, bot_api_info)
+            else
+              if new_status != bot_record.status do
+                Logger.info("Bot #{bot_record.recall_bot_id} status updated to: #{new_status}")
+              end
+            end
         end
 
       {:error, reason} ->

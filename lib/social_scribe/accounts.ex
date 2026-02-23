@@ -299,8 +299,8 @@ defmodule SocialScribe.Accounts do
   Finds or creates a HubSpot credential for a user.
   HubSpot uses a single credential per hub_id (account).
   """
-  def find_or_create_hubspot_credential(user, attrs) do
-    case get_user_credential(user, "hubspot", attrs.uid) do
+  def find_or_create_hubspot_credential(_user, attrs) do
+    case Repo.get_by(UserCredential, provider: "hubspot", uid: attrs.uid) do
       nil ->
         create_user_credential(attrs)
 
@@ -314,6 +314,26 @@ defmodule SocialScribe.Accounts do
   """
   def get_user_hubspot_credential(user_id) do
     Repo.get_by(UserCredential, user_id: user_id, provider: "hubspot")
+  end
+
+  @doc """
+  Finds or creates a Salesforce credential for a user.
+  """
+  def find_or_create_salesforce_credential(_user, attrs) do
+    case Repo.get_by(UserCredential, provider: "salesforce", uid: attrs.uid) do
+      nil ->
+        create_user_credential(attrs)
+
+      %UserCredential{} = credential ->
+        update_user_credential(credential, attrs)
+    end
+  end
+
+  @doc """
+  Gets the user's Salesforce credential if one exists.
+  """
+  def get_user_salesforce_credential(user_id) do
+    Repo.get_by(UserCredential, user_id: user_id, provider: "salesforce")
   end
 
   defp get_user_by_oauth_uid(provider, uid) do

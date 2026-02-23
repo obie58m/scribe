@@ -37,23 +37,23 @@ Social Scribe is a powerful Elixir and Phoenix LiveView application designed to 
 
 ## App Flow
 
-* **Login With Google and Meetins Sync:**
-    ![Auth Flow](https://youtu.be/RM7YSlu5ZDg)
+* **Login With Google and Meetings Sync:**
+    [Auth Flow](https://youtu.be/RM7YSlu5ZDg)
 
 * **Creating Automations:**
-    ![Creating Automations](https://youtu.be/V2tIKgUQYEw)
+    [Creating Automations](https://youtu.be/V2tIKgUQYEw)
 
 * **Meetings Recordings:**
-    ![Meetings Recording](https://youtu.be/pZrLsoCfUeA)
+    [Meetings Recording](https://youtu.be/pZrLsoCfUeA)
 
 * **Facebook Login:**
-    ![Facebook Login](https://youtu.be/JRhPqCN-jeI)
+    [Facebook Login](https://youtu.be/JRhPqCN-jeI)
 
 * **Facebook Post:**
-    ![Facebook Post](https://youtu.be/4w6zpz0Rn2o)
+    [Facebook Post](https://youtu.be/4w6zpz0Rn2o)
 
 * **LinkedIn Login & Post:**
-    ![LinkedIn Login and Post](https://youtu.be/wuD_zefGy2k)
+    [LinkedIn Login and Post](https://youtu.be/wuD_zefGy2k)
 ---
 
 ## 📸 Screenshots & GIFs
@@ -73,7 +73,7 @@ Social Scribe is a powerful Elixir and Phoenix LiveView application designed to 
 * **Backend:** Elixir, Phoenix LiveView
 * **Database:** PostgreSQL
 * **Background Jobs:** Oban
-* **Authentication:** Ueberauth (for Google, LinkedIn, Facebook, HubSpot OAuth)
+* **Authentication:** Ueberauth (for Google, LinkedIn, Facebook, HubSpot, Salesforce OAuth)
 * **Meeting Transcription:** Recall.ai API
 * **AI Content Generation:** Google Gemini API (Flash models)
 * **Frontend:** Tailwind CSS, Heroicons (via `tailwind.config.js`)
@@ -87,59 +87,88 @@ Follow these steps to get SocialScribe running on your local machine.
 
 ### Prerequisites
 
-* Elixir
-* Erlang/OTP 
-* PostgreSQL
-* Node.js (for Tailwind CSS asset compilation)
+* **Elixir** ~> 1.17 (tested with 1.18.x)
+* **Erlang/OTP** 27+
+* **PostgreSQL** 14+
+* **Node.js** 18+ LTS (for Tailwind CSS asset compilation)
 
 ### Setup Instructions
 
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/fparadas/social_scribe.git 
+    git clone https://github.com/fparadas/social_scribe.git
     cd social_scribe
     ```
 
-2.  **Install Dependencies & Setup Database:**
-    The `mix setup` command bundles common setup tasks.
+2.  **Configure Environment Variables:**
+    Copy the example environment file and fill in your credentials:
+    ```bash
+    cp .env.example .env
+    ```
+    Edit `.env` with your actual API keys and OAuth credentials. See `.env.example` for descriptions of each variable.
+
+3.  **Install Dependencies & Setup Database:**
     ```bash
     mix setup
     ```
-    This will typically:
-    * Install Elixir dependencies (`mix deps.get`)
-    * Create your database if it doesn't exist (`mix ecto.create`)
-    * Run database migrations (`mix ecto.migrate`)
-    * Install Node.js dependencies for assets (`cd assets && npm install && cd ..`)
-
-3.  **Configure Environment Variables:**
-    You'll need to set up several API keys and OAuth credentials.
-    * Copy the example environment file (if one is provided, e.g., `.env.example`) to `.env`.
-    * Edit the `.env` file (or set environment variables directly) with your actual credentials:
-        * `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID.
-        * `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret.
-        * `GOOGLE_REDIRECT_URI`: `"http://localhost:4000/auth/google/callback"`
-        * `RECALL_API_KEY`: Your Recall.ai API Key (as provided for the challenge).
-        * `GEMINI_API_KEY`: Your Google Gemini API Key.
-        * `LINKEDIN_CLIENT_ID`: Your LinkedIn App Client ID.
-        * `LINKEDIN_CLIENT_SECRET`: Your LinkedIn App Client Secret.
-        * `LINKEDIN_REDIRECT_URI`: `"http://localhost:4000/auth/linkedin/callback"`
-        * `FACEBOOK_APP_ID`: Your Facebook App ID.
-        * `FACEBOOK_APP_SECRET`: Your Facebook App Secret.
-        * `FACEBOOK_REDIRECT_URI`: `"http://localhost:4000/auth/facebook/callback"`
-        * `HUBSPOT_CLIENT_ID`: Your HubSpot App Client ID.
-        * `HUBSPOT_CLIENT_SECRET`: Your HubSpot App Client Secret.
-        * `HUBSPOT_REDIRECT_URI`: `"http://localhost:4000/auth/hubspot/callback"`
+    This will install Elixir dependencies, create the database, run migrations, and install Node.js assets.
 
 4.  **Start the Phoenix Server:**
     ```bash
-    mix phx.server
+    source .env && mix phx.server
     ```
     Or, to run inside IEx (Interactive Elixir):
     ```bash
-    iex -S mix phx.server
+    source .env && iex -S mix phx.server
     ```
 
+    > **Important:** You must `source .env` before starting the server so that API keys and OAuth credentials are loaded into the environment.
+
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+
+### Running Tests
+
+```bash
+source .env && mix test
+```
+
+---
+
+## 📁 Project Structure
+
+```
+lib/
+├── social_scribe/                    # Business logic (contexts)
+│   ├── accounts.ex                   # User accounts, credentials, OAuth persistence
+│   ├── meetings.ex                   # Meetings, transcripts, participants
+│   ├── automations.ex                # User-defined AI automation templates
+│   ├── ai_content_generator.ex       # Google Gemini API client (email drafts, CRM suggestions)
+│   ├── ai_content_generator_api.ex   # Behaviour + dispatch (swappable for tests via Mox)
+│   ├── hubspot_api.ex                # HubSpot CRM API client
+│   ├── hubspot_suggestions.ex        # Merges AI suggestions with HubSpot contact data
+│   ├── salesforce_api.ex             # Salesforce CRM API client
+│   ├── salesforce_suggestions.ex     # Merges AI suggestions with Salesforce contact data
+│   ├── salesforce_token_refresher.ex # Salesforce OAuth token refresh logic
+│   └── workers/                      # Oban background jobs
+│       ├── bot_status_poller.ex      # Polls Recall.ai for completed recordings
+│       ├── ai_content_generation_worker.ex
+│       ├── hubspot_token_refresher.ex
+│       └── salesforce_token_refresher.ex
+├── social_scribe_web/                # Web layer (Phoenix)
+│   ├── controllers/auth_controller.ex  # OAuth callbacks for all providers
+│   ├── live/
+│   │   ├── meeting_live/
+│   │   │   ├── show.ex               # Meeting detail page (LiveView)
+│   │   │   ├── show.html.heex        # Meeting detail template
+│   │   │   ├── hubspot_modal_component.ex
+│   │   │   └── salesforce_modal_component.ex
+│   │   └── user_settings_live.ex     # Settings page (connect accounts)
+│   └── components/
+│       └── modal_components.ex       # Shared CRM modal UI components
+└── ueberauth/strategy/              # Custom Ueberauth OAuth strategies
+    ├── hubspot.ex
+    └── salesforce.ex
+```
 
 ---
 
@@ -155,6 +184,39 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
     * From the "Meeting Details" page, users can view AI-generated email drafts and posts from their automations.
     * "Copy" buttons are available.
     * "Post" buttons allow direct posting to LinkedIn (as the user) and the selected Facebook Page (as the Page).
+
+---
+
+## 🔗 Salesforce Integration
+
+### Salesforce OAuth Integration
+
+* **Custom Ueberauth Strategy:** Implemented in `lib/ueberauth/strategy/salesforce.ex` and `lib/ueberauth/strategy/salesforce/oauth.ex`
+* **OAuth 2.0 Flow:** Handles authorization code flow with Salesforce's standard `/services/oauth2/authorize` and `/services/oauth2/token` endpoints
+* **Credential Storage:** Credentials stored in `user_credentials` table with `provider: "salesforce"`, including `token`, `refresh_token`, `expires_at`, and `metadata` (stores `instance_url`)
+* **Token Refresh:**
+    * `SalesforceTokenRefresher` Oban cron worker runs every 5 minutes to proactively refresh tokens expiring within 10 minutes
+    * Internal `with_token_refresh/2` wrapper automatically refreshes expired tokens on API calls and retries the request
+
+### Salesforce Modal UI
+
+* **LiveView Component:** Located at `lib/social_scribe_web/live/meeting_live/salesforce_modal_component.ex`
+* **Contact Search:** Debounced input triggers Salesforce SOSL search, results displayed in dropdown
+* **AI Suggestions:** Fetched via `SalesforceSuggestions.generate_suggestions` which calls Gemini with transcript context and Salesforce field names
+* **Suggestion Cards:** Each card displays field label, current value (strikethrough), arrow, and suggested value with transcript timestamp
+* **Selective Updates:** Checkbox per field allows selective updates; "Update Salesforce" button disabled until at least one field selected
+* **Form Submission:** Batch-updates selected contact fields via `SalesforceApi.update_contact` (PATCH to Salesforce REST API)
+
+### Architecture Notes (Future CRM Support)
+
+The Salesforce integration mirrors the existing HubSpot pattern to make adding new CRMs straightforward:
+1. Create a Ueberauth strategy for OAuth
+2. Create an API client module with a behaviour (for testability via Mox)
+3. Create a token refresher (module + Oban worker)
+4. Add a `generate_{crm}_suggestions` function to the AI content generator
+5. Create a suggestions module to merge AI output with contact data
+6. Create a LiveView modal component
+7. Wire it into the meeting show page and settings
 
 ---
 

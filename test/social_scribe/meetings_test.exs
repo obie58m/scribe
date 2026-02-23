@@ -295,8 +295,15 @@ defmodule SocialScribe.MeetingsTest do
       assert meeting.meeting_transcript
       assert meeting.meeting_transcript.language == "en-us"
 
-      assert meeting.meeting_transcript.content["data"] ==
-               transcript_data |> Jason.encode!() |> Jason.decode!()
+      expected_data =
+        transcript_data
+        |> Jason.encode!()
+        |> Jason.decode!()
+        |> Enum.map(fn segment ->
+          Map.put(segment, "speaker", get_in(segment, ["participant", "name"]))
+        end)
+
+      assert meeting.meeting_transcript.content["data"] == expected_data
 
       # Verify participants were created (all attendees, not just speakers)
       assert length(meeting.meeting_participants) == 2

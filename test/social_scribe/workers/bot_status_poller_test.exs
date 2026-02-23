@@ -147,8 +147,15 @@ defmodule SocialScribe.Workers.BotStatusPollerTest do
 
       transcript_record = Repo.get_by!(Meetings.MeetingTranscript, meeting_id: meeting.id)
 
-      assert transcript_record.content["data"] ==
-               @mock_transcript_data |> Jason.encode!() |> Jason.decode!()
+      expected_data =
+        @mock_transcript_data
+        |> Jason.encode!()
+        |> Jason.decode!()
+        |> Enum.map(fn segment ->
+          Map.put(segment, "speaker", get_in(segment, ["participant", "name"]))
+        end)
+
+      assert transcript_record.content["data"] == expected_data
 
       meeting_id = meeting.id
 

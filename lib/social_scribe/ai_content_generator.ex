@@ -1,5 +1,11 @@
 defmodule SocialScribe.AIContentGenerator do
-  @moduledoc "Generates content using Google Gemini."
+  @moduledoc """
+  Generates AI content using the Google Gemini API.
+
+  Handles follow-up email drafts, custom automations, and CRM contact
+  update suggestions (HubSpot and Salesforce). All functions accept a
+  meeting struct and return `{:ok, result}` or `{:error, reason}`.
+  """
 
   @behaviour SocialScribe.AIContentGeneratorApi
 
@@ -93,7 +99,7 @@ defmodule SocialScribe.AIContentGenerator do
 
         case call_gemini(prompt) do
           {:ok, response} ->
-            parse_hubspot_suggestions(response)
+            parse_crm_suggestions(response)
 
           {:error, reason} ->
             {:error, reason}
@@ -101,8 +107,62 @@ defmodule SocialScribe.AIContentGenerator do
     end
   end
 
-  defp parse_hubspot_suggestions(response) do
-    # Clean up the response - remove markdown code blocks if present
+  @impl SocialScribe.AIContentGeneratorApi
+  def generate_salesforce_suggestions(meeting) do
+    case Meetings.generate_prompt_for_meeting(meeting) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, meeting_prompt} ->
+        prompt = """
+        You are an AI assistant that extracts contact information updates from meeting transcripts.
+
+        Analyze the following meeting transcript and extract any information that could be used to update a Salesforce Contact record.
+
+        Look for mentions of:
+        - First name (FirstName)
+        - Last name (LastName)
+        - Phone numbers (Phone, MobilePhone)
+        - Email addresses (Email)
+        - Job title/role (Title)
+        - Department (Department)
+        - Mailing address details (MailingStreet, MailingCity, MailingState, MailingPostalCode, MailingCountry)
+
+        IMPORTANT: Only extract information that is EXPLICITLY mentioned in the transcript. Do not infer or guess.
+
+        The transcript includes timestamps in [MM:SS] format at the start of each line.
+
+        Return your response as a JSON array of objects. Each object should have:
+        - "field": the Salesforce field API name (use exactly: FirstName, LastName, Email, Phone, MobilePhone, Title, Department, MailingStreet, MailingCity, MailingState, MailingPostalCode, MailingCountry)
+        - "value": the extracted value
+        - "context": a brief quote of where this was mentioned
+        - "timestamp": the timestamp in MM:SS format where this was mentioned
+
+        If no contact information updates are found, return an empty array: []
+
+        Example response format:
+        [
+          {"field": "Phone", "value": "555-123-4567", "context": "John mentioned 'you can reach me at 555-123-4567'", "timestamp": "01:23"},
+          {"field": "Department", "value": "Engineering", "context": "Sarah said she just moved to the Engineering department", "timestamp": "05:47"}
+        ]
+
+        ONLY return valid JSON, no other text.
+
+        Meeting transcript:
+        #{meeting_prompt}
+        """
+
+        case call_gemini(prompt) do
+          {:ok, response} ->
+            parse_crm_suggestions(response)
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  end
+
+  defp parse_crm_suggestions(response) do
     cleaned =
       response
       |> String.trim()
@@ -131,7 +191,6 @@ defmodule SocialScribe.AIContentGenerator do
         {:ok, []}
 
       {:error, _} ->
-        # If JSON parsing fails, return empty suggestions
         {:ok, []}
     end
   end

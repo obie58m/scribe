@@ -405,7 +405,6 @@ defmodule SocialScribe.Meetings do
   end
 
   defp parse_transcript_attrs(meeting, transcript_data) do
-    # Handle case where transcript is a JSON string (new Recall API format)
     parsed_data =
       case transcript_data do
         data when is_binary(data) -> Jason.decode!(data, keys: :atoms)
@@ -413,11 +412,24 @@ defmodule SocialScribe.Meetings do
         _ -> []
       end
 
+    normalized_data = Enum.map(parsed_data, &normalize_transcript_segment/1)
+
     %{
       meeting_id: meeting.id,
-      content: %{data: parsed_data},
+      content: %{data: normalized_data},
       language: List.first(parsed_data, %{}) |> Map.get(:language, "unknown")
     }
+  end
+
+  defp normalize_transcript_segment(segment) do
+    speaker =
+      case segment do
+        %{speaker: name} when is_binary(name) -> name
+        %{participant: %{name: name}} when is_binary(name) -> name
+        _ -> "Unknown Speaker"
+      end
+
+    Map.put(segment, :speaker, speaker)
   end
 
   defp parse_participant_attrs(meeting, participant_data) do
@@ -507,7 +519,11 @@ defmodule SocialScribe.Meetings do
 
   defp format_transcript_for_prompt(transcript_segments) when is_list(transcript_segments) do
     Enum.map_join(transcript_segments, "\n", fn segment ->
-      speaker = Map.get(segment, "speaker", "Unknown Speaker")
+      speaker =
+        Map.get(segment, "speaker") ||
+          get_in(segment, ["participant", "name"]) ||
+          "Unknown Speaker"
+
       words = Map.get(segment, "words", [])
       text = Enum.map_join(words, " ", &Map.get(&1, "text", ""))
       timestamp = format_timestamp(List.first(words))

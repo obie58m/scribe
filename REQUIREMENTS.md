@@ -1,13 +1,25 @@
-### New feature to add
+### Features
 
-- In settings, allow me to connect Hubspot using OAuth
-    - Create a Hubspot OAuth app. They have a self serve developer portal.
-- After you record a new meeting:
-    - Allow me to open a modal where I can review suggested updates to a Hubspot contact
-    - Show a search/select where I can search for a Hubspot contact
-    - Use the Hubspot API to pull the contact record
-    - Use AI to generate a list of suggested updates to the Hubspot record
-        - For example, if the user mentioned “My phone number is 8885550000 it suggests updating their phone number in the CRM”
-    - I should show the existing value in Hubspot and the AI suggested update to the field
-    - The UI should for reviewing and submitting updates should look exactly like this. We’d like to see your ability to match a design perfectly. ![UI design](image.png)
-    - After reviewing the updates, I can click “Update Hubspot” and it will sync the updates to the selected Hubspot contact.
+#### HubSpot Integration (existing)
+
+- In settings, connect HubSpot using OAuth
+- After recording a new meeting:
+    - Open a modal to review AI-suggested updates to a HubSpot contact
+    - Search/select a HubSpot contact
+    - Use the HubSpot API to pull the contact record
+    - AI generates suggested updates based on the meeting transcript
+    - Shows existing value vs. AI-suggested update for each field
+    - Click "Update HubSpot" to sync updates to the selected contact
+
+#### Salesforce Integration (new)
+
+- In settings, connect Salesforce using OAuth (Connected App)
+- After recording a new meeting:
+    - Open a modal to review AI-suggested updates to a Salesforce contact
+    - Search/select a Salesforce contact via SOSL search
+    - Use the Salesforce REST API to pull the contact record
+    - AI generates suggested updates to Salesforce fields based on the meeting transcript
+    - Shows existing value in Salesforce and the AI-suggested update for each field
+    - Click "Update Salesforce" to sync selected updates to the Salesforce contact
+    - Token refresh via Oban cron worker (proactive refresh before expiry)
+    - Architecture designed for easy addition of more CRMs in the future
