@@ -184,6 +184,7 @@ defmodule SocialScribe.AIContentGenerator do
             }
           end)
           |> Enum.filter(fn s -> s.field != nil and s.value != nil end)
+          |> Enum.uniq_by(& &1.field)
 
         {:ok, formatted}
 
